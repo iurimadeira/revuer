@@ -39,9 +39,34 @@ def test_does_not_serve_files_outside_static_dir(static_dir: Path) -> None:
     assert "secret" not in response.text
 
 
-def test_unknown_api_route_is_not_found(static_dir: Path) -> None:
-    response = TestClient(create_app(static_dir)).get("/api/missing")
+@pytest.mark.parametrize("path", ["/api", "/api/missing"])
+def test_unknown_api_route_is_not_found(static_dir: Path, path: str) -> None:
+    response = TestClient(create_app(static_dir)).get(path)
     assert response.status_code == 404
+
+
+def test_api_routes_added_after_create_app_are_reachable(static_dir: Path) -> None:
+    app = create_app(static_dir)
+
+    @app.get("/api/sessions")
+    def sessions() -> list[str]:
+        return []
+
+    response = TestClient(app).get("/api/sessions")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_head_serves_index(static_dir: Path) -> None:
+    response = TestClient(create_app(static_dir)).head("/")
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/%00", "/" + "a" * 300])
+def test_unusable_paths_fall_back_to_index(static_dir: Path, path: str) -> None:
+    response = TestClient(create_app(static_dir)).get(path)
+    assert response.status_code == 200
+    assert "<title>revuer</title>" in response.text
 
 
 def test_ui_not_built(tmp_path: Path) -> None:

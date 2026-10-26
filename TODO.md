@@ -26,9 +26,12 @@ serves a React shell, plus global and per-project config files.
 - [ ] `revuer serve` starts the daemon on `127.0.0.1:7420` by default.
 - [ ] Global config at `$XDG_CONFIG_HOME/revuer/config.toml` (default
       `~/.config/revuer/config.toml`) with `[server] host, port` and `repos = [...]`.
-- [ ] Project config at `<repo>/.revuer.toml` with `[branch] default_parent`.
-- [ ] Precedence: CLI flag, then project file, then global file, then defaults.
-- [ ] Server keys in a project file are ignored with a warning.
+- [ ] Project config loader for `<repo>/.revuer.toml` with
+      `[branch] default_parent`, with tests. `serve` reads it from M2.
+- [ ] Precedence per key, where layers overlap: CLI flag, then project file,
+      then global file, then defaults. Today only `server.*` overlaps (CLI and
+      global). The project-over-global test arrives with the first shared key.
+- [ ] Server keys in a project file are ignored, with a notice returned as data.
 - [ ] Invalid config fails with a clear message naming the file and key.
 - [ ] CI runs ruff, pyright, pytest, frontend typecheck and frontend build.
 
@@ -55,6 +58,7 @@ repository. Each worktree is a session with its own URL.
 - [ ] `revuer url` prints the URL of the session for the current directory, or
       fails with a hint if the directory is not in a configured repo.
 - [ ] A missing or broken repo path shows an error for that repo only.
+- [ ] `serve` reads each repo's `.revuer.toml` and prints its notices.
 
 **Subtasks**
 - [ ] Worktree discovery with tests against real temporary repos.

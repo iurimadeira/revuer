@@ -32,15 +32,17 @@ host = "127.0.0.1"
 port = 7420
 ```
 
-Project config at `<repo>/.revuer.toml`:
+Relative `repos` entries resolve against the config file's directory.
+Command-line flags win over the global file.
+
+Project config at `<repo>/.revuer.toml` (read once repo discovery lands):
 
 ```toml
 [branch]
 default_parent = "main"
 ```
 
-Command-line flags win over config files. `[server]` in a project file is
-ignored with a warning.
+`[server]` in a project file is ignored with a notice.
 
 ## License
 

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -59,6 +60,8 @@ def test_repos_expand_home_and_resolve(
     [
         ('[server]\nport = "x"\n', "server.port"),
         ("[server]\nport = 70000\n", "server.port"),
+        ("[server]\nport = true\n", "server.port"),
+        ("[server]\nport = 7420.0\n", "server.port"),
         ("[server]\ncolour = 1\n", "server.colour"),
         ("unknown = 1\n", "unknown"),
         ("repos = [1]\n", "repos.0"),
@@ -74,31 +77,72 @@ def test_invalid_global_file_names_file_and_key(
     assert key in str(error.value)
 
 
+def test_relative_repos_resolve_against_config_dir(
+    config_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    write(config_home / "revuer" / "config.toml", 'repos = ["projects/app"]\n')
+    assert load_global_config().repos == [config_home / "revuer" / "projects" / "app"]
+
+
 def test_malformed_toml_names_file(config_home: Path) -> None:
     path = write(config_home / "revuer" / "config.toml", "[server\n")
-    with pytest.raises(ConfigError, match="invalid TOML") as error:
+    with pytest.raises(ConfigError) as error:
+        load_global_config()
+    assert str(path) in str(error.value)
+
+
+def test_non_utf8_file_names_file(config_home: Path) -> None:
+    path = config_home / "revuer" / "config.toml"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'repos = ["\xff"]\n')
+    with pytest.raises(ConfigError) as error:
+        load_global_config()
+    assert str(path) in str(error.value)
+
+
+def test_directory_config_path_names_file(config_home: Path) -> None:
+    path = config_home / "revuer" / "config.toml"
+    path.mkdir(parents=True)
+    with pytest.raises(ConfigError) as error:
+        load_global_config()
+    assert str(path) in str(error.value)
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root can read any file")
+def test_unreadable_file_names_file(config_home: Path) -> None:
+    path = write(config_home / "revuer" / "config.toml", "repos = []\n")
+    path.chmod(0)
+    with pytest.raises(ConfigError) as error:
         load_global_config()
     assert str(path) in str(error.value)
 
 
 def test_project_defaults_without_file(tmp_path: Path) -> None:
-    assert load_project_config(tmp_path).branch.default_parent is None
+    config, notices = load_project_config(tmp_path)
+    assert config.branch.default_parent is None
+    assert notices == []
 
 
 def test_project_default_parent(tmp_path: Path) -> None:
     write(tmp_path / ".revuer.toml", '[branch]\ndefault_parent = "develop"\n')
-    assert load_project_config(tmp_path).branch.default_parent == "develop"
+    config, notices = load_project_config(tmp_path)
+    assert config.branch.default_parent == "develop"
+    assert notices == []
 
 
-def test_project_server_table_is_ignored_with_warning(tmp_path: Path) -> None:
+def test_project_server_table_is_ignored_with_notice(tmp_path: Path) -> None:
     path = write(
         tmp_path / ".revuer.toml",
         '[server]\nport = 1\n[branch]\ndefault_parent = "main"\n',
     )
-    with pytest.warns(UserWarning, match=r"\[server\]") as record:
-        config = load_project_config(tmp_path)
-    assert str(path) in str(record[0].message)
+    config, notices = load_project_config(tmp_path)
     assert config.branch.default_parent == "main"
+    assert len(notices) == 1
+    assert str(path) in notices[0]
+    assert "[server]" in notices[0]
 
 
 @pytest.mark.parametrize(

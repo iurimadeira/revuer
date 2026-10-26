@@ -4,23 +4,23 @@ Which keys live at which layer (later columns win over earlier ones):
 
 | Key                     | Default     | Global file | Project file      | CLI flag |
 | ----------------------- | ----------- | ----------- | ----------------- | -------- |
-| `server.host`           | `127.0.0.1` | yes         | ignored, warns    | `--host` |
-| `server.port`           | `7420`      | yes         | ignored, warns    | `--port` |
+| `server.host`           | `127.0.0.1` | yes         | ignored, notice   | `--host` |
+| `server.port`           | `7420`      | yes         | ignored, notice   | `--port` |
 | `repos`                 | `[]`        | yes         | no                | no       |
 | `branch.default_parent` | none        | no          | yes               | no       |
 
 The global file is `$XDG_CONFIG_HOME/revuer/config.toml` (default
 `~/.config/revuer/config.toml`). The project file is `<repo>/.revuer.toml`.
+Relative `repos` entries resolve against the global file's directory.
 Unknown keys are errors, except `[server]` in a project file.
 """
 
 import os
 import tomllib
-import warnings
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
 class ConfigError(Exception):
@@ -33,17 +33,12 @@ class Strict(BaseModel):
 
 class ServerConfig(Strict):
     host: str = "127.0.0.1"
-    port: int = Field(default=7420, ge=1, le=65535)
+    port: int = Field(default=7420, strict=True, ge=1, le=65535)
 
 
 class GlobalConfig(Strict):
     server: ServerConfig = ServerConfig()
     repos: list[Path] = []
-
-    @field_validator("repos")
-    @classmethod
-    def _absolute(cls, repos: list[Path]) -> list[Path]:
-        return [repo.expanduser().resolve() for repo in repos]
 
 
 def global_config_path() -> Path:
@@ -52,12 +47,13 @@ def global_config_path() -> Path:
 
 
 def _read(path: Path) -> dict[str, Any]:
-    if not path.is_file():
-        return {}
     try:
-        return tomllib.loads(path.read_text())
-    except tomllib.TOMLDecodeError as error:
-        raise ConfigError(f"{path}: invalid TOML: {error}") from error
+        with path.open("rb") as file:
+            return tomllib.load(file)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as error:
+        raise ConfigError(f"{path}: cannot load config: {error}") from error
 
 
 def _validate[T: BaseModel](model: type[T], data: dict[str, Any], path: Path) -> T:
@@ -72,7 +68,9 @@ def _validate[T: BaseModel](model: type[T], data: dict[str, Any], path: Path) ->
 
 def load_global_config() -> GlobalConfig:
     path = global_config_path()
-    return _validate(GlobalConfig, _read(path), path)
+    config = _validate(GlobalConfig, _read(path), path)
+    repos = [(path.parent / repo.expanduser()).resolve() for repo in config.repos]
+    return config.model_copy(update={"repos": repos})
 
 
 class BranchConfig(Strict):
@@ -83,16 +81,17 @@ class ProjectConfig(Strict):
     branch: BranchConfig = BranchConfig()
 
 
-def load_project_config(repo_root: Path) -> ProjectConfig:
+def load_project_config(repo_root: Path) -> tuple[ProjectConfig, list[str]]:
+    """Return the project config and notices about ignored keys."""
     path = repo_root / ".revuer.toml"
     data = _read(path)
+    notices: list[str] = []
     if data.pop("server", None) is not None:
-        warnings.warn(
+        notices.append(
             f"{path}: [server] is ignored in project files; set it in "
-            f"{global_config_path()}",
-            stacklevel=2,
+            f"{global_config_path()}"
         )
-    return _validate(ProjectConfig, data, path)
+    return _validate(ProjectConfig, data, path), notices
 
 
 def resolve_server(

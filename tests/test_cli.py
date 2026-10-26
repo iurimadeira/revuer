@@ -54,3 +54,12 @@ def test_serve_reports_invalid_config(config_home: Path) -> None:
     assert result.exit_code == 1
     assert str(path) in result.output
     assert "server.port" in result.output
+
+
+def test_serve_reports_unreadable_config(config_home: Path) -> None:
+    path = config_home / "revuer" / "config.toml"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"\xff")
+    result = CliRunner().invoke(cli.app, ["serve"])
+    assert result.exit_code == 1
+    assert str(path) in result.output
