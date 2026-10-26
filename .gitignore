@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.egg-info/
+node_modules/
+dist/
+src/revuer/static/
+.pytest_cache/
+.ruff_cache/
