@@ -17,7 +17,7 @@ updates, no graph.
 
 ### M1. Project skeleton and config
 
-Status: todo
+Status: doing
 
 **What to build.** A Python package with a Typer CLI and a FastAPI server that
 serves a React shell, plus global and per-project config files.
