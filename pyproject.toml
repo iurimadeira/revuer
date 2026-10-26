@@ -1,0 +1,45 @@
+[project]
+name = "revuer"
+version = "0.1.0"
+description = "A local daemon with a CLI and a web UI for reviewing code per git worktree and branch."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi~=0.162",
+    "typer",
+    "uvicorn",
+]
+
+[project.scripts]
+revuer = "revuer.cli:app"
+
+[dependency-groups]
+dev = [
+    "httpx2",
+    "pyright",
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/revuer"]
+artifacts = ["src/revuer/static/"]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["src/revuer/static/"]
+
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"]
+
+[tool.pyright]
+include = ["src", "tests"]
+strict = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
