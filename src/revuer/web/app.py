@@ -4,7 +4,9 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, PlainTextResponse
 from starlette.types import Receive, Scope, Send
 
-STATIC_DIR = Path(__file__).parent / "static"
+__all__ = ["STATIC_DIR", "UI_NOT_BUILT", "create_app"]
+
+STATIC_DIR = Path(__file__).parents[1] / "static"
 UI_NOT_BUILT = "revuer UI not built. Run `pnpm --dir frontend build` and restart."
 
 

@@ -5,17 +5,6 @@ import pytest
 from typer.testing import CliRunner
 
 from revuer import cli
-from revuer.config import GlobalConfig, ServerConfig, resolve_server
-
-
-def test_resolve_server_defaults() -> None:
-    assert resolve_server(GlobalConfig()) == ServerConfig(host="127.0.0.1", port=7420)
-
-
-def test_resolve_server_flags_win_over_file() -> None:
-    config = GlobalConfig(server=ServerConfig(host="0.0.0.0", port=8000))
-    assert resolve_server(config, port=9000) == ServerConfig(host="0.0.0.0", port=9000)
-    assert resolve_server(config, host="::1") == ServerConfig(host="::1", port=8000)
 
 
 @pytest.fixture

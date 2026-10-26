@@ -20,6 +20,7 @@ revuer = "revuer.cli:app"
 [dependency-groups]
 dev = [
     "httpx2",
+    "import-linter>=2.15",
     "pyright",
     "pytest",
     "ruff",
@@ -37,7 +38,7 @@ artifacts = ["src/revuer/static/"]
 artifacts = ["src/revuer/static/"]
 
 [tool.ruff.lint]
-extend-select = ["I", "UP", "B"]
+extend-select = ["I", "UP", "B", "SIM", "C4", "RUF", "PT"]
 
 [tool.pyright]
 include = ["src", "tests"]
@@ -45,3 +46,39 @@ strict = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
+[tool.importlinter]
+root_packages = ["revuer"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Context cores are pure"
+type = "forbidden"
+source_modules = ["revuer.config.core"]
+forbidden_modules = [
+    "fastapi",
+    "io",
+    "logging",
+    "os",
+    "revuer.config.loader",
+    "shutil",
+    "socket",
+    "starlette",
+    "subprocess",
+    "time",
+    "typer",
+    "uvicorn",
+]
+
+[[tool.importlinter.contracts]]
+name = "Interfaces use public context APIs"
+type = "forbidden"
+source_modules = ["revuer.cli", "revuer.web"]
+forbidden_modules = ["revuer.config.core", "revuer.config.loader"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Interfaces sit above contexts"
+type = "layers"
+layers = ["revuer.cli", "revuer.web", "revuer.config"]

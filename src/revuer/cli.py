@@ -3,8 +3,10 @@ from typing import Annotated
 import typer
 import uvicorn
 
-from revuer.app import create_app
 from revuer.config import ConfigError, load_global_config, resolve_server
+from revuer.web import create_app
+
+__all__ = ["app"]
 
 app = typer.Typer(no_args_is_help=True)
 

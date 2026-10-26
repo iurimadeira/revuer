@@ -19,6 +19,8 @@ uv run revuer serve
 The daemon listens on `http://127.0.0.1:7420` by default. Use
 `revuer serve --host <host> --port <port>` to change it.
 
+Code layout and import rules are in [CONTEXT.md](CONTEXT.md).
+
 ## Configuration
 
 Global config at `$XDG_CONFIG_HOME/revuer/config.toml` (default

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from revuer.app import create_app
+from revuer.web import create_app
 
 
 @pytest.fixture

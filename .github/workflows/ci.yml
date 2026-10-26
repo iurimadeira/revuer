@@ -25,6 +25,7 @@ jobs:
       - run: uv run ruff check
       - run: uv run ruff format --check
       - run: uv run pyright
+      - run: uv run lint-imports
       - run: pnpm --dir frontend install --frozen-lockfile
       - run: pnpm --dir frontend typecheck
       - run: pnpm --dir frontend build
